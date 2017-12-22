@@ -1,0 +1,60 @@
+#!/bin/bash
+#2017-06-26
+
+#Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
+#http://colby.id.au/node/39
+
+LOAD=100
+ CPU=(`grep '^cpu ' /proc/stat`)
+ unset CPU[0]                          # Discard the "cpu" prefix.
+ IDLEA=${CPU[4]}                        # Get the idle CPU time.
+  
+ # Calculate the total CPU time.
+ TOTALA=0
+ for VALUE in "${CPU[@]}"; do
+  let "TOTALA=$TOTALA+$VALUE"
+ done
+ 
+while true; do		# While load >30%
+ osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
+ ki="n"
+ read -t 1 -p "Skip cpucsekk? y/n " ki
+ if [ "$ki" == "y" ]; then
+  break
+ fi
+
+ nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
+ 
+ CPU=(`grep '^cpu ' /proc/stat`)
+ unset CPU[0]                          # Discard the "cpu" prefix.
+ IDLEB=${CPU[4]}                        # Get the idle CPU time.
+  
+ # Calculate the total CPU time.
+ TOTALB=0
+ for VALUE in "${CPU[@]}"; do
+  let "TOTALB=$TOTALB+$VALUE"
+ done
+ 
+ let "TOTAL=$TOTALB-$TOTALA"		# Increments since last round
+ let "IDLE=$IDLEB-$IDLEA"
+ let "LOAD=100*($TOTAL-$IDLE)/$TOTAL"	# Load percent since last round
+ 
+ ido=`date +%T`
+ topbol=`top -b -n1 |
+  awk '{
+   if ($1=="PID"){
+    getline
+    i=NF-3
+    print $i"%  \t" $NF
+   }
+  }'`
+ let "ioincr=$nsda-$osda"
+ echo "$ido  io: $ioincr  total load: $LOAD%	top of top: $topbol"
+ TOTALA=$TOTALB				# Turn this round into last round
+ IDLEA=$IDLEB
+
+ #if [[ $LOAD -lt 30 ]] ; then
+ if [[ $LOAD -lt 30 ]] && [[ $osda == $nsda ]] ; then
+  break
+ fi
+done

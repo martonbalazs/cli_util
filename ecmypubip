@@ -1,0 +1,83 @@
+#!/bin/bash
+# 2015.08.29
+
+# Displays public ip if changed.
+
+#How often should we check for ip (in sec)?
+often=10
+urls=(ipinfo.io/ip ifconfig.me ipecho.net/plain)
+nooftimes=10
+
+function getthatip {
+
+# Go through the servers  
+ out=""
+
+ for currurl in ${urls[*]}
+ do
+
+# Sometimes we get no response
+  wcn=1
+  while [[ -z "$trueip" && "$wcn" -le "$nooftimes" ]]; do
+   #trueip=`curl -m 20 $currurl`
+   trueip=`curl --connect-timeout 20 $currurl`
+   wcn=$((wcn+1))
+   sleep 1
+  done
+  if [[ $wcn -gt $nooftimes ]]; then
+   trueip="Got no response from $currurl"
+  fi
+
+# What do we got?
+  if [[ $trueip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
+  then
+   out="$trueip"
+   nonoftimes=0
+   break
+  else
+   out="$out; $trueip"
+  fi
+  trueip=""
+ done
+
+}
+
+nowis=`date +'%y.%m.%d %a, %H:%M'`
+
+# Do we have the dir?
+if [ ! -d ~/.mypubip ]; then
+ mkdir ~/.mypubip
+fi
+
+# Do we have the file?
+if [ -e ~/.mypubip/mypubip.txt ]; then
+
+# The file was refreshed at:
+ refreshedat=`ls -l --time-style\=+%s ~/.mypubip/mypubip.txt | awk '{ print$6 }' `
+
+# Time now is, then subtract $often:
+ shouldhaverefreshed=`date +%s`
+ let shouldhaverefreshed=$shouldhaverefreshed-$often
+
+# If file is too old, refresh:
+ if [ $refreshedat -lt $shouldhaverefreshed ]; then
+
+  getthatip
+
+  filedip=`cat ~/.mypubip/mypubip.txt`
+  echo "$out" > ~/.mypubip/mypubip.txt
+  if [ "$out" != "$filedip" ]; then
+   echo "The ip at $nowis changed from $filedip to $out"
+  fi
+ fi
+else
+
+# If file doesn't exist, refresh:
+
+ getthatip
+
+ echo "$out" > ~/.mypubip/mypubip.txt
+ echo "The ip at $nowis is $out"
+fi
+
+

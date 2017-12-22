@@ -1,0 +1,24 @@
+#!/bin/bash
+
+dbok=0
+
+while [ $dbok -lt 3 ]; do
+ dbst=`dropbox status`
+ ido=`date +%T`
+ echo "$ido Dropbox: $dbst	; $dbok"
+ if [[ "$dbst" == "Idle" ]] || [[ "$dbst" == "Up to date" ]]; then
+  let dbok=dbok+1
+ else
+  let dbok=0
+ fi 
+ if [ $dbok == 0 ]; then
+  ki="n"
+  read -t 5 -p "Skip dbst? s" ki
+  if [ "$ki" == "s" ]; then
+   break
+  fi
+ fi
+ if [[ $dbok == 1 ]] || [[ $dbok == 2 ]]; then
+  sleep 1
+ fi
+done

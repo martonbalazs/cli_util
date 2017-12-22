@@ -1,0 +1,4 @@
+#!/bin/bash
+#2012.03.25
+
+gnome-terminal --working-directory=`pwd`

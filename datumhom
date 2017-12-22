@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Prints date, time, weather for airports. Only reads weather after "often" secs have passed. Needs "metar", and notice "where" to set the ICAO code of location.
+# Can use with gltext screensaver (/usr/share/applications/screensavers/gltext.desktop):
+# Exec=gltext -root -front -program ~/bin/datumhom
+
+# Where to collect from?
+where="eggd" #Bristol
+
+# How often should we update the weather (in sec)?
+often=300
+
+#Echo the date and time
+#date +'%y.%m.%e %a, %H:%M'
+date +'%y.%m.%d %a, %H:%M'
+
+# Do we have the dir?
+if [ ! -d ~/.datumhom ]; then
+ mkdir ~/.datumhom
+fi
+
+# Do we have the file?
+if [ -e ~/.datumhom/hom.txt ]; then
+
+# The file was refreshed at:
+ refreshedat=`ls -l --time-style\=+%s ~/.datumhom/hom.txt | awk '{ print$6 }' `
+
+# Time now is, then subtract $often:
+ shouldhaverefreshed=`date +%s`
+ let shouldhaverefreshed=$shouldhaverefreshed-$often
+
+# If file is too old, refresh:
+ if [ $refreshedat -lt $shouldhaverefreshed ]; then
+  metar -d $where|awk '{ if ($1=="Temperature") print($3 "C"); if ($2=="speed") printf($4*1.852 "km/h; ") }' > ~/.datumhom/hom.txt
+ fi
+else
+# If file doesn't exist, refresh:
+ metar -d $where|awk '{ if ($1=="Temperature") print($3 "C"); if ($2=="speed") printf($4*1.852 "km/h; ") }' > ~/.datumhom/hom.txt
+fi
+
+#Print the file
+cat ~/.datumhom/hom.txt

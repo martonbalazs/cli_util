@@ -1,0 +1,47 @@
+#!/bin/bash
+# REpeating TErminal TImer
+# Use as reteti <no of minutes> <"optional text">
+
+re='^[0-9]+$'
+if ! [[ $1 =~ $re ]] ; then
+ echo "Give me an integer (minutes to wait)."
+ exit 1
+fi
+
+if ! [[ $1 > 0 ]] ; then
+ echo "Give me a positive number (minutes to wait)."
+ exit 1
+fi
+
+if [[ "$2" != "" ]] ; then
+ about="about $2 "
+else
+ about=""
+fi
+
+stime=`date +%s`
+cycno=1
+
+while true; do
+
+ ntime=`date +%s`
+ fracmin=$(( ($ntime-$stime)/60 ))
+ cycshould=$(( ($ntime-$stime)/60/$1+1 ))
+
+ if [[ "$cycno" -ne "$cycshould" ]]; then
+  zenity --warning --text="Reminder $cycno: reteti timer ${about}set to $1 mins $fracmin mins ago" &
+  # espeak "Warning $cycno: timer set to $1 minutes $fracmin minutes ago"
+  #ogg123 /usr/share/sounds/freedesktop/stereo/complete.oga
+  paplay /usr/share/sounds/freedesktop/stereo/complete.oga
+  cycno=$cycshould
+ fi
+
+ nextsec=$(( $stime+$cycno*$1*60-$ntime ))
+
+ clear
+ echo "Timer ${about}set to ${1}m ${fracmin}m ago. Reminder $cycno in ${nextsec}s. Stop: [s]"
+ read -s -t 1 -n 1 key
+ if [ "$key" == "s" ]; then
+  break
+ fi
+done
