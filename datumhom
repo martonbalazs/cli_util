@@ -31,11 +31,11 @@ if [ -e ~/.datumhom/hom.txt ]; then
 
 # If file is too old, refresh:
  if [ $refreshedat -lt $shouldhaverefreshed ]; then
-  metar -d $where|awk '{ if ($1=="Temperature") print($3 "C"); if ($2=="speed") printf($4*1.852 "km/h; ") }' > ~/.datumhom/hom.txt
+  metar -d $where|awk '{ if ($1=="Temperature") print($3 "C"); if ($2=="speed") printf("%.0f" "km/h; ",$4*1.852) }' > ~/.datumhom/hom.txt
  fi
 else
 # If file doesn't exist, refresh:
- metar -d $where|awk '{ if ($1=="Temperature") print($3 "C"); if ($2=="speed") printf($4*1.852 "km/h; ") }' > ~/.datumhom/hom.txt
+ metar -d $where|awk '{ if ($1=="Temperature") print($3 "C"); if ($2=="speed") printf("%.0f" "km/h; ",$4*1.852) }' > ~/.datumhom/hom.txt
 fi
 
 #Print the file
