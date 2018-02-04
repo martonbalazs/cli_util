@@ -1,0 +1,284 @@
+#!/bin/bash
+#2018-02-04
+
+# Use as: daddybank <file>
+# or
+# daddybank <file> <3-letter currency code>
+# uses http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml for conversion.
+
+# <file> format:
+# <orgmode style active date> name currency [set/add/sub/int/yrl] amount [whatever from here]
+# e.g. <2017-03-19 Sun> John GBP set 56.45
+# set to set balance
+# add to add to balance
+# sub to subtract from balance
+# int to set interest rate in %/year for account
+# yrl to set yearly premium for account
+
+function doit {
+ cat $1 | sort |
+ gawk ' BEGIN{
+  namecount=0
+ }
+ {
+ if (substr($1,1,1) == "<")
+  {
+   split(substr($1,2,10),ld,"-")
+   ldday=mktime(ld[1]" "ld[2]" "ld[3]" "0" "0" "0)/(24*60*60)
+ 
+ # Check if we have name+currency, set index.
+   if (namecount == 0)
+   {
+    namecount=1
+    names[1]=$3" "$4
+    nameindex=1
+ # We need to init values
+    balance[nameindex]=0
+    interest[nameindex]=0
+    premium[nameindex]=0
+    dates[nameindex]=0
+   }
+   else
+   {
+    nameindex=0
+    for (i=1; i<=namecount; i++)
+    {
+     if (names[i] == $3" "$4)
+     {
+      nameindex=i
+     }
+    }
+    if (nameindex == 0)
+    {
+     namecount++
+     names[namecount]=$3" "$4
+     nameindex=namecount
+ # We need to init values
+     balance[nameindex]=0
+     interest[nameindex]=0
+     premium[nameindex]=0
+     dates[nameindex]=0
+    }
+   }
+   #print(nameindex", "names[nameindex])
+ 
+ # We now have nameindex for the current line.
+ # Calculate balance before applying line
+ # Previous balance now worth:
+   #frombalance=balance[nameindex]*(1+interest[nameindex]/100)^((ldday-dates[nameindex])/365)
+   frombalance=balance[nameindex]*(1+interest[nameindex]/(100*365))^((ldday-dates[nameindex]))
+ # Premium with continuous (daily) interest:
+   if (interest[nameindex] == 0)
+   {
+    frompremium=premium[nameindex]*(ldday-dates[nameindex])/365
+   }
+   else
+   {
+    frompremium=premium[nameindex]/365*((1+interest[nameindex]/(100*365))^(ldday-dates[nameindex])-1)/(interest[nameindex]/(100*365))
+   }
+   balance[nameindex]=frombalance+frompremium
+ 
+ # Reset date
+   dates[nameindex]=ldday
+ 
+ # Now apply line
+   if ($5 == "set")
+   {
+    balance[nameindex]=$6
+   }
+ 
+   if ($5 == "add")
+   {
+    balance[nameindex]=balance[nameindex]+$6
+   }
+ 
+   if ($5 == "sub")
+   {
+    balance[nameindex]=balance[nameindex]-$6
+   }
+ 
+   if ($5 == "int")
+   {
+    interest[nameindex]=$6
+   }
+ 
+   if ($5 == "yrl")
+   {
+    premium[nameindex]=$6
+   }
+  }
+ }
+ END{
+ # Apply stuff with todays date
+  ldday=systime()/(24*60*60)
+  for (i=1; i<=namecount; i++)
+  {
+ # Testing:
+   #print("Index: "i" Name: "names[i]" Balance: "balance[i]" Interest: "interest[i]" Date: "dates[i]" Premium: "premium[i])
+ 
+ 
+ # Previous balance now worth:
+   #frombalance=balance[i]*(1+interest[i]/100)^((ldday-dates[i])/365)
+   frombalance=balance[i]*(1+interest[i]/(100*365))^((ldday-dates[i]))
+ # Premium with continuous (daily) interest:
+   if (interest[i] == 0)
+   {
+    frompremium=premium[i]*(ldday-dates[i])/365
+   }
+   else
+   {
+    frompremium=premium[i]/365*((1+interest[i]/(100*365))^(ldday-dates[i])-1)/(interest[i]/(100*365))
+   }
+   balance[i]=frombalance+frompremium
+ 
+ # Print stuff
+   printf ("%s: %.2f\n",names[i],balance[i])
+  }
+ }'
+}
+
+separate=`doit $1`
+
+echo "$separate"
+
+# If we need to convert:
+if [[ "$2" != "" ]]
+then
+# Get rates and print their date
+ rrates=`wget -O- "http://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml" 2>/dev/null`
+# echo "$rrates"
+
+ echo""
+
+ echo "$rrates" | gawk -F\' '{
+ if ( substr( $1, length($1) - 4, length($1) ) == "time=" )
+ {
+  print("Rates valid on: "$2". TOTALS:")
+ }
+}'
+
+# Get list of available currencies
+ curr=$(
+  echo "$rrates" | gawk -F\' '{
+   if ( substr( $3, length($3) - 4, length($3) ) == "rate=" )
+   {
+    printf($2" ")
+   }
+  }
+  END {
+   print("EUR")
+  }'
+ )
+# echo "$curr"
+
+# Get rates (currency/EUR)
+ rates=$(
+  echo "$rrates" | gawk -F\' '{
+   if ( substr( $3, length($3) - 4, length($3) ) == "rate=" )
+   {
+    printf($4" ")
+   }
+  }
+  END {
+   print("1")
+  }'
+ )
+# echo "$rates"
+
+# Check if we have currency $2
+ haveit="no"
+ for i in $curr
+ do
+  if [[ "$i" == "$2" ]]
+  then
+   haveit="yes"
+  fi
+ done
+
+ if [[ "$haveit" == "no" ]]
+ then
+  echo "I don't have a rate for $2. Available currencies:"
+  echo "$curr"
+  exit
+ fi
+
+# And finally do the conversation.
+
+ echo "$separate" | gawk -v curr="$curr" -v rates="$rates" -v needin="$2" 'BEGIN {
+  n=split(curr, c)
+  split(rates, r)
+  
+#  for (i = 1; i <= n; i++)
+#  {
+#   print(c[i]" "r[i])
+#  }
+  namecount=0
+ }
+ {
+# Check if we have a new name, add if needed
+  if (namecount > 0)
+  {
+   newname="yes"
+   for (i = 1; i <= namecount; i++)
+   {
+    if ($1 == names[i])
+    {
+     newname="no"
+     whoisit=i
+    }
+   }
+   if (newname == "yes")
+   {
+    namecount++
+    names[namecount]=$1
+    whoisit=namecount
+    eur[whoisit]=0
+   }
+  }
+  else
+  {
+   namecount++
+   names[namecount]=$1
+   whoisit=namecount
+   eur[whoisit]=0
+  }
+
+# Now add $$$ to names[whoisit]
+# Check if we have that currency and add $$$ in EUR
+  havecurr="no"
+  acurr=substr($2,1,3)
+  for (i = 1; i <= n; i++)
+  {
+   if (acurr == c[i])
+   {
+    havecurr="yes"
+    eur[whoisit]=eur[whoisit]+$3/r[i]
+   }
+  }
+  if (havecurr == "no")
+  {
+   print("WARNING: I cannot convert "acurr" for "$1". Available currencies: "curr".")
+  }
+ 
+ }
+ END {
+# Find the rate for currency needin
+  for (i = 1; i <= n; i++)
+  {
+   if (c[i] == needin)
+   {
+    needr=r[i]
+   }
+  }
+
+# Convert to needin and print  
+  total=0
+  for (i = 1; i <= namecount; i++)
+  {
+   total=total+eur[i]
+   printf ("%s: %s %.2f\n",names[i],needin,eur[i]*needr)
+  }
+  printf ("TOTAL: %s %.2f\n",needin,total*needr)
+ }'
+
+fi

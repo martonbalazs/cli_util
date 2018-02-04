@@ -1,8 +1,21 @@
 #!/bin/bash
-#2017-11-27
+#2018-01-31
 
 #Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
 #http://colby.id.au/node/39
+
+delay=2		# Seconds to wait before next measurement
+
+if [ ! -d $HOME/.cpucsekk/ ]
+then
+ mkdir $HOME/.cpucsekk/
+fi
+
+# Edit this file for different CPU load levels.
+if [ ! -f $HOME/.cpucsekk/silent_cpucsekk.txt ]
+then
+ echo "15" > $HOME/.cpucsekk/silent_cpucsekk.txt
+fi
 
 LOAD=100
  CPU=(`grep '^cpu ' /proc/stat`)
@@ -15,10 +28,17 @@ LOAD=100
   let "TOTALA=$TOTALA+$VALUE"
  done
  
-while true; do		# While load >30%
+while true; do		# While load > $cpupc%
+ cpupc=`cat $HOME/.cpucsekk/silent_cpucsekk.txt`	# How low do we allow to step to the next task
+
+ re='^[0-9]+$'
+ if ! [[ $cpupc =~ $re ]] ; then
+  echo "$HOME/.cpucsekk/silent_cpucsekk.txt should contain a single percentage number." >&2; exit 1
+ fi
+
  osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
 
- sleep 2
+ sleep $delay
 
  nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
  
@@ -39,8 +59,8 @@ while true; do		# While load >30%
  TOTALA=$TOTALB				# Turn this round into last round
  IDLEA=$IDLEB
 
- #if [[ $LOAD -lt 30 ]] ; then
- if [[ $LOAD -lt 30 ]] && [[ $osda == $nsda ]] ; then
+ #if [[ $LOAD -lt $cpupc ]] ; then
+ if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] ; then
   break
  fi
 done
