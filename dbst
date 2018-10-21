@@ -3,7 +3,13 @@
 dbok=0
 
 while [ $dbok -lt 3 ]; do
- dbst=`dropbox status`
+ command -v dropbox-cli > /dev/null 2>&1
+ if [ "$?" -ne "0" ]
+ then
+  dbst=`dropbox status`
+ else
+  dbst=`dropbox-cli status`
+ fi
  ido=`date +%T`
  echo "$ido Dropbox: $dbst	; $dbok"
  if [[ "$dbst" == "Idle" ]] || [[ "$dbst" == "Up to date" ]]; then
