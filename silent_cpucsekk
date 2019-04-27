@@ -1,5 +1,5 @@
 #!/bin/bash
-#2018-01-31
+#2019-01-28
 
 #Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
 #http://colby.id.au/node/39
@@ -36,11 +36,13 @@ while true; do		# While load > $cpupc%
   echo "$HOME/.cpucsekk/silent_cpucsekk.txt should contain a single percentage number." >&2; exit 1
  fi
 
- osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
+# osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
+ osda=`cat /sys/block/sda/stat | awk '{ print($11) }'`	# also check sda is not busy. (currently only sda is checked...)
 
  sleep $delay
 
- nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
+ #nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
+ nsda=`cat /sys/block/sda/stat | awk '{ print($11) }'`
  
  CPU=(`grep '^cpu ' /proc/stat`)
  unset CPU[0]                          # Discard the "cpu" prefix.
@@ -53,6 +55,7 @@ while true; do		# While load > $cpupc%
  done
  
  let "TOTAL=$TOTALB-$TOTALA"		# Increments since last round
+ #echo "$TOTAL"
  let "IDLE=$IDLEB-$IDLEA"
  let "LOAD=100*($TOTAL-$IDLE)/$TOTAL"	# Load percent since last round
  

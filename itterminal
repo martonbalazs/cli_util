@@ -1,4 +1,5 @@
 #!/bin/bash
-#2012.03.25
+#2018-12-26
 
-gnome-terminal --working-directory=`pwd`
+# gnome-terminal --working-directory=`pwd`
+urxvt -cd `pwd` &
