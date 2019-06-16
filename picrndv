@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# View pics from a random sub-dir under $1. 
+
+if [[ ! -d "$1" ]]
+then
+ echo "I cannot find the directory $1"
+ exit
+fi
+
+dirlist=$(find "$1" -type d)
+
+while true
+do
+ dirn=`echo "$dirlist"|sort -R | head -n1`
+ if [ "$(ls -A $dirn/*.* 2>/dev/null)" ]
+ then
+  break
+ fi
+done
+
+echo "$dirn"
+cd "$dirn"
+eog *.*

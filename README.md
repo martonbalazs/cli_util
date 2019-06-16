@@ -27,6 +27,8 @@ where [name] must be a single word, and the fourth entry is any of
 
 * mypubip emails you your public ip if it has changed. This is my replacement for dyndns; can be run every few minutes using crontab. :-) See the script for settings. The one named ecmypubip doesn't send email, just echoes your public ip if changed.
 
+* picrndv opens a random directory from your photalbum (a dir to be given as parameter). I run it once a day. :-)
+
 * reteti [integer] [optional text] (**re**peating **te**rminal **ti**mer) reminds you via zenity and a system sound about "text" every "integer" minutes.
 
 I'm no programmer, so please don't blame me on the quality of the code. :-)
