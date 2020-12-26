@@ -4,7 +4,10 @@
 # Can use with gltext screensaver (/usr/share/applications/screensavers/gltext.desktop):
 # Exec=gltext -root -front -program ~/bin/datumhom
 
-# Where to collect from?
+# Metar seems to break regularly. This might help:
+export METARURL="https://tgftp.nws.noaa.gov/data/observations/metar/stations/"
+
+# Where to collect from? --> instead do metar set eggd
 where="eggd" #Bristol
 
 # How often should we update the weather (in sec)?

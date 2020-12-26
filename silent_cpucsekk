@@ -1,10 +1,11 @@
 #!/bin/bash
-#2019-01-28
+#2020-11-10
 
 #Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
 #http://colby.id.au/node/39
 
-delay=2		# Seconds to wait before next measurement
+delay=1		# Seconds to wait before next measurement
+swapthr=80	# Also hangs if swap is more full than this percent
 
 if [ ! -d $HOME/.cpucsekk/ ]
 then
@@ -58,12 +59,22 @@ while true; do		# While load > $cpupc%
  #echo "$TOTAL"
  let "IDLE=$IDLEB-$IDLEA"
  let "LOAD=100*($TOTAL-$IDLE)/$TOTAL"	# Load percent since last round
+
+# Now let's look at the swap
+ swaptot=$(awk '$1~/^SwapTotal/ {print($2)}' /proc/meminfo)
+ swapfr=$(awk '$1~/^SwapFree/ {print($2)}' /proc/meminfo)
+ if [[ "$swaptot" =~ ^[0-9]+$ ]] && [[ "$swaptot" != "0" ]]
+ then
+  swappc=$((100-100*$swapfr/$swaptot))
+ else
+  swappc=0
+ fi
  
  TOTALA=$TOTALB				# Turn this round into last round
  IDLEA=$IDLEB
 
  #if [[ $LOAD -lt $cpupc ]] ; then
- if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] ; then
+ if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] ; then
   break
  fi
 done

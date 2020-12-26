@@ -1,10 +1,13 @@
 #!/bin/bash
-#2019-01-28
+#2020-11-10
 
 #Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
 #http://colby.id.au/node/39
 
-delay=2		# Seconds to wait before next measurement
+# Had problems with narrow screens. So, save just two columns: %CPU and COMMAND from within top to ~/bin/.toprc
+
+delay=1		# Seconds to wait before next measurement
+swapthr=80	# Also hangs if swap is more full than this percent
 
 if [ ! -d $HOME/.cpucsekk/ ]
 then
@@ -17,17 +20,18 @@ then
  echo "15" > $HOME/.cpucsekk/cpucsekk.txt
 fi
 
-
 LOAD=100
- CPU=(`grep '^cpu ' /proc/stat`)
- unset CPU[0]                          # Discard the "cpu" prefix.
- IDLEA=${CPU[4]}                        # Get the idle CPU time.
-  
- # Calculate the total CPU time.
- TOTALA=0
- for VALUE in "${CPU[@]}"; do
-  let "TOTALA=$TOTALA+$VALUE"
- done
+CPU=(`grep '^cpu ' /proc/stat`)
+unset CPU[0]                          # Discard the "cpu" prefix.
+IDLEA=${CPU[4]}                        # Get the idle CPU time.
+ 
+# Calculate the total CPU time.
+TOTALA=0
+for VALUE in "${CPU[@]}"; do
+ let "TOTALA=$TOTALA+$VALUE"
+done
+
+echo "cpucsekk: press s [enter] to skip."
  
 while true; do		# While load > $cpupc%
  cpupc=`cat $HOME/.cpucsekk/cpucsekk.txt`	# How low do we allow to step to the next task
@@ -36,7 +40,8 @@ while true; do		# While load > $cpupc%
  if ! [[ $cpupc =~ $re ]] ; then
   echo "$HOME/.cpucsekk/cpucsekk.txt should contain a single percentage number." >&2; exit 1
  fi
- #osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
+
+# osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
  osda=`cat /sys/block/sda/stat | awk '{ print($11) }'`	# also check sda is not busy. (currently only sda is checked...)
  ki="n"
 
@@ -45,8 +50,8 @@ while true; do		# While load > $cpupc%
  # cpucsekk seems a good place to try cure this.
  # python3 -c $'import os\nos.set_blocking(0, True)'
  #cat /proc/self/fdinfo/0
- read -t $delay -p "Skip cpucsekk? y/n " ki
- if [ "$ki" == "y" ]; then
+ read -t $delay -p "" ki
+ if [ "$ki" == "s" ]; then
   break
  fi
 
@@ -66,23 +71,43 @@ while true; do		# While load > $cpupc%
  let "TOTAL=$TOTALB-$TOTALA"		# Increments since last round
  let "IDLE=$IDLEB-$IDLEA"
  let "LOAD=100*($TOTAL-$IDLE)/$TOTAL"	# Load percent since last round
+
+# Now let's look at the swap
+ swaptot=$(awk '$1~/^SwapTotal/ {print($2)}' /proc/meminfo)
+ swapfr=$(awk '$1~/^SwapFree/ {print($2)}' /proc/meminfo)
+ if [[ "$swaptot" =~ ^[0-9]+$ ]] && [[ "$swaptot" != "0" ]]
+ then
+  swappc=$((100-100*$swapfr/$swaptot))
+ else
+  swappc=0
+ fi
  
  ido=`date +%T`
- topbol=`top -b -n1 |
+# topbol=`top -b -n1 |
+#  awk '{
+#   if ($1=="PID"){
+#    getline
+#    i=NF-3
+#    print $i"%  " $NF
+#   }
+#  }'`
+
+# Had problems with narrow screens. So, save just two columns: %CPU and COMMAND from within top to ~/bin/.toprc
+topbol=`HOME=$HOME/bin/ top -b -n1 |
   awk '{
-   if ($1=="PID"){
+   if ($1=="%CPU"){
     getline
-    i=NF-3
-    print $i"%  \t" $NF
+    i=NF-1
+    print $i"%  " $NF
    }
   }'`
  let "ioincr=$nsda-$osda"
- echo "$ido  io: $ioincr  total load: $LOAD%	top of top: $topbol"
+ echo "$ido  io: $ioincr  t $LOAD%  sw $swappc%  top $topbol"
  TOTALA=$TOTALB				# Turn this round into last round
  IDLEA=$IDLEB
 
  #if [[ $LOAD -lt $cpupc ]] ; then
- if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] ; then
+ if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] ; then
   # python3 -c $'import os\nos.set_blocking(0, True)'
   #cat /proc/self/fdinfo/0
   break
