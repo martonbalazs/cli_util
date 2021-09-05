@@ -31,6 +31,8 @@ where [name] must be a single word, and the fourth entry is any of
 
 * reteti [integer] [optional text] (**re**peating **te**rminal **ti**mer) reminds you via zenity and a system sound about "text" every "integer" minutes.
 
+* rndmemitem [csv file] reads out entries of a .csv file (separated by ";" ) one by one at keypress. The lines are taken in a random order. I use this as a weekly test of fast memory items. An example for the ICAO spelling alphabet (abc.csv) and another one for the UK emergency phone numbers (uknumbers.csv) are included.
+
 I'm no programmer, so please don't blame me on the quality of the code. :-)
 
 Licensed under GNU GPLv3.

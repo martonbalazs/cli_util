@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Brings up questions before showing you answers. Good for regular review of fast memory items.
+# Needs a .csv file as input to read from.
+# The .csv file must be separated by ";" and have the first field as the question, second field as the answer.
+# E.g., 
+# A;Alfa
+# B;Bravo
+# C;Charlie
+#
+# or
+#
+# Covid;Hands;Face;Space
+# etc.
+
+if [[ "$1" == "" ]]
+then
+ echo "Usage: rndmemitem <.csv file>"
+ exit 1
+fi
+
+if [[ ! -f "$1" ]]
+then
+ echo "File $1 not found."
+ exit 1
+fi
+
+bname=`basename "$1"`
+elej=${bname%.*}
+
+# echo "basename: $bname"
+# echo "elej: $elej"
+
+k=$elej`date +%N`.txt
+
+# Random order of the file. 
+shuf "$1" > /tmp/$k
+
+# Number of question fields (i.e., lines).
+# lines=`wc -l /tmp/$k | awk '{ print($1) }'`
+
+# Main part, go through lines, ask question then show answers. Haven't found a nice way to pause awk without newline so doing it with sed instead.
+
+IFS=";"
+
+while read line
+do
+ #echo "Record is : $line"
+# count number of fields
+ nfields=`echo "$line" | tr ';' '\n' | wc -l`
+ nfieldsm=$(( $nfields - 1 ))
+
+# Make an array out of line, notice IFS above
+ read -a larr <<< "$line"
+# # echo "${larr[@]}"
+
+# Echo the question, followed by ":"
+ echo -n "${larr[0]}: "
+# NOTICE for read: file is given as input to read (after closing while)!! Hence the <&1 to read from st input
+ read -n1 -s <&1
+
+# All answers still in the same line one by one, except the last one
+ for ((i=2; i<=$nfieldsm; i++))
+ do
+  im=$(( $i - 1 ))
+  echo -n "${larr[im]} "
+  read -n1 -s <&1
+ done
+
+# Last answer will add newline
+ echo "${larr[$nfieldsm]}"
+done < /tmp/$k
+
+# This was an old version with awk, only displays one answer
+# i=0
+# while [ $i -lt $lines ]
+# do
+#  i=$(($i+1))
+#  sed -n "${i}p" /tmp/$k | 
+#  awk -F\; '{
+#   printf ($1"	")
+#  }'
+#  read -n1 -s
+#  sed -n "${i}p" /tmp/$k | 
+#  awk -F\; '{
+#   print ($2)
+#  }'
+# done
+
+rm /tmp/$k
