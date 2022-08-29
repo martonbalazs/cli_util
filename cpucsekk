@@ -1,5 +1,4 @@
 #!/bin/bash
-#2020-11-10
 
 #Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
 #http://colby.id.au/node/39
@@ -8,6 +7,10 @@
 
 delay=1		# Seconds to wait before next measurement
 swapthr=80	# Also hangs if swap is more full than this percent
+chkrsync=1	# Turn this to 0 if you want to skip check for a running rsync. Especially with hard drives, it's not nice to load the system during rsyncing.
+
+# Randomize delay: it's no good to finish all instances at the same time if a script launches multiple cpucsekks.
+rdelay=`echo "$delay*($RANDOM/32767+0.5)"|bc -l`
 
 if [ ! -d $HOME/.cpucsekk/ ]
 then
@@ -41,23 +44,46 @@ while true; do		# While load > $cpupc%
   echo "$HOME/.cpucsekk/cpucsekk.txt should contain a single percentage number." >&2; exit 1
  fi
 
-# osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
- osda=`cat /sys/block/sda/stat | awk '{ print($11) }'`	# also check sda is not busy. (currently only sda is checked...)
- ki="n"
+ if [[ -f /sys/block/sda/stat ]]
+ then
+  #osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
+  osda=`cat /sys/block/sda/stat | awk '{ print($11) }'`	# also check sda is not busy.
+  ki="n"
 
  # There have been read error problems: "read error: 0: Resource temporarily unavailable"
  # https://stackoverflow.com/questions/19895185/bash-shell-read-error-0-resource-temporarily-unavailable
  # cpucsekk seems a good place to try cure this.
  # python3 -c $'import os\nos.set_blocking(0, True)'
  #cat /proc/self/fdinfo/0
- read -t $delay -p "" ki
- if [ "$ki" == "s" ]; then
-  break
+  read -t $rdelay -p "" ki
+  if [ "$ki" == "s" ]; then
+   break
+  fi
+
+  #nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
+  nsda=`cat /sys/block/sda/stat | awk '{ print($11) }'`
+ 
+ elif [[ -f /sys/block/nvme0n1/stat ]]
+ then
+  osda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`	# also check ssd is not busy.
+  ki="n"
+
+ # There have been read error problems: "read error: 0: Resource temporarily unavailable"
+ # https://stackoverflow.com/questions/19895185/bash-shell-read-error-0-resource-temporarily-unavailable
+ # cpucsekk seems a good place to try cure this.
+ # python3 -c $'import os\nos.set_blocking(0, True)'
+ #cat /proc/self/fdinfo/0
+  read -t $rdelay -p "" ki
+  if [ "$ki" == "s" ]; then
+   break
+  fi
+
+  nsda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`
+ else
+  osda=0
+  nsda=0
  fi
 
- #nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
- nsda=`cat /sys/block/sda/stat | awk '{ print($11) }'`
- 
  CPU=(`grep '^cpu ' /proc/stat`)
  unset CPU[0]                          # Discard the "cpu" prefix.
  IDLEB=${CPU[4]}                        # Get the idle CPU time.
@@ -106,8 +132,29 @@ topbol=`HOME=$HOME/bin/ top -b -n1 |
  TOTALA=$TOTALB				# Turn this round into last round
  IDLEA=$IDLEB
 
+# Check for running rsync
+ rsyncruns="0"
+ if [[ $chkrsync == "1" ]]
+ then
+  ps cax | grep rsync > /dev/null
+  if [ $? -eq 0 ]; then
+   echo "Found runnning rsync, waiting..."
+   rsyncruns="1"
+  fi
+ fi
+
+# Check for other cpucsekks, to avoid simultaneous ending
+# ps -C seems to output list in increasing order so we just check the first item. We can let things go if we are the first.
+ allcpids=`ps -C cpucsekk -C silent_cpucsekk -o pid=|sed 's/ //g'`
+#echo "My PID: $$; all PIDS: $allcpids"
+ cqueuepos=`echo "$allcpids"|awk -v line=$$ '$0 == line {print NR}'`
+ if [[ $cqueuepos > 1 ]]
+ then
+  echo "We are at position $cqueuepos in the cpucsekk line."
+ fi
+
  #if [[ $LOAD -lt $cpupc ]] ; then
- if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] ; then
+ if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] && [[ $rsyncruns == "0" ]] && [[ $cqueuepos == 1 ]] ; then
   # python3 -c $'import os\nos.set_blocking(0, True)'
   #cat /proc/self/fdinfo/0
   break

@@ -2,6 +2,18 @@
 # REpeating TErminal TImer
 # Use as reteti <no of minutes> <"optional text">
 
+command -v zenity > /dev/null 2>&1
+if [ "$?" -ne "0" ]; then
+ echo "Please install zenity first."
+ exit 1
+fi
+
+command -v paplay > /dev/null 2>&1
+if [ "$?" -ne "0" ]; then
+ echo "Please install paplay first."
+ exit 1
+fi
+
 re='^[0-9]+$'
 if ! [[ $1 =~ $re ]] ; then
  echo "Give me an integer (minutes to wait)."
