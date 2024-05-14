@@ -34,7 +34,7 @@ for VALUE in "${CPU[@]}"; do
  let "TOTALA=$TOTALA+$VALUE"
 done
 
-echo "cpucsekk: press s [enter] to skip."
+echo "cpucsekk: press c [enter] to skip."
  
 while true; do		# While load > $cpupc%
  cpupc=`cat $HOME/.cpucsekk/cpucsekk.txt`	# How low do we allow to step to the next task
@@ -56,7 +56,7 @@ while true; do		# While load > $cpupc%
  # python3 -c $'import os\nos.set_blocking(0, True)'
  #cat /proc/self/fdinfo/0
   read -t $rdelay -p "" ki
-  if [ "$ki" == "s" ]; then
+  if [ "$ki" == "c" ]; then
    break
   fi
 
@@ -74,7 +74,7 @@ while true; do		# While load > $cpupc%
  # python3 -c $'import os\nos.set_blocking(0, True)'
  #cat /proc/self/fdinfo/0
   read -t $rdelay -p "" ki
-  if [ "$ki" == "s" ]; then
+  if [ "$ki" == "c" ]; then
    break
   fi
 
@@ -109,26 +109,12 @@ while true; do		# While load > $cpupc%
  fi
  
  ido=`date +%T`
-# topbol=`top -b -n1 |
-#  awk '{
-#   if ($1=="PID"){
-#    getline
-#    i=NF-3
-#    print $i"%  " $NF
-#   }
-#  }'`
 
-# Had problems with narrow screens. So, save just two columns: %CPU and COMMAND from within top to ~/bin/.toprc
-topbol=`HOME=$HOME/bin/ top -b -n1 |
-  awk '{
-   if ($1=="%CPU"){
-    getline
-    i=NF-1
-    print $i"%  " $NF
-   }
-  }'`
+ topbol=`$HOME/bin/topoftop`
+
  let "ioincr=$nsda-$osda"
- echo "$ido  io: $ioincr  t $LOAD%  sw $swappc%  top $topbol"
+ siotop=`$HOME/bin/showiotop`
+ echo "$ido  io: $ioincr  t $LOAD%  sw $swappc%  $topbol $siotop"
  TOTALA=$TOTALB				# Turn this round into last round
  IDLEA=$IDLEB
 

@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Extract the top process of iotop.
+# Optional /home/mb13434/.showiotop/showiotop_col.txt to change default column 9, since there are various versions of iotop out there. 0 Means do nothing (e.g., if iotop is not granted sudo, see below).
+# Obviously needs iotop, and add
+# ## Allow root to run any commands anywhere”)
+# balazs ALL=(ALL) NOPASSWD:/usr/bin/iotop
+# to /etc/sudoers
+
+colno=9
+
+if [[ -f ~/.showiotop/showiotop_col.txt ]]
+then
+ colraw=`cat ~/.showiotop/showiotop_col.txt`
+ re='^[0-9]+$'
+ if ! [[ $colraw =~ $re ]]
+ then
+  echo "~/.showiotop/showiotop_col.txt needs to be a nonnegative integer" >&2; exit 1
+ elif [[ $colraw == "0" ]]
+ then
+  exit 0
+ else
+  colno=$colraw
+ fi
+fi
+
+sudo iotop -obn 1|
+awk -v coln="$colno" '$1 ~ /^[0-9]+$/ {print($coln)}'|
+head -n 1

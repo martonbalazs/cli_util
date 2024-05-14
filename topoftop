@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Gets the heaviest job from top, if above certain threshold.
+
+# Cpucsekk stuff first
+if [ ! -d $HOME/.cpucsekk/ ]
+then
+ mkdir $HOME/.cpucsekk/
+fi
+
+# Edit this file for different CPU load threshold.
+if [ ! -f $HOME/.cpucsekk/cpucsekk.txt ]
+then
+ echo "15" > $HOME/.cpucsekk/cpucsekk.txt
+fi
+
+# Don't display anything below this threshold:
+cpupc=`cat $HOME/.cpucsekk/cpucsekk.txt`
+re='^[0-9]+$'
+if ! [[ $cpupc =~ $re ]] ; then
+ echo "$HOME/.cpucsekk/cpucsekk.txt should contain a single percentage number." >&2; exit 1
+fi
+
+# Get top percentage and name of process
+topoutp=`top -b -n1 |
+awk '{
+# We set the relevant column numbers further down. If they are set then print from the next line and exit.
+ if (commcol>0){
+  printf "%d ",$cpucol
+  printf $commcol
+  exit
+ }
+# Setting relevant column numbers here.
+ for (i=1; i<=NF; i++){
+  if ($i=="%CPU"){
+   cpucol=i
+   lineno=FNR+1
+  }
+  if ($i=="COMMAND"){
+   commcol=i
+  }
+ } 
+}'`
+
+topp=${topoutp% *}
+topn=${topoutp#* }
+## Test:
+#echo "$topoutp"
+#echo "topp: $topp"
+#echo "$topn"
+#echo "cpupc: $cpupc"
+
+if [[ $topp -gt $cpupc ]]
+then
+ echo "$topn $topp%"
+fi

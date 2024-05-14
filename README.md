@@ -33,6 +33,10 @@ where [name] must be a single word, and the fourth entry is any of
 
 * rndmemitem [csv file] reads out entries of a .csv file (separated by ";" ) one by one at keypress. The lines are taken in a random order. I use this as a weekly test of fast memory items. An example for the ICAO spelling alphabet (abc.csv) and another one for the UK emergency phone numbers (uknumbers.csv) are included.
 
+* showiotop uses iotop to show if a process is using the disk much. I use it in my status bar as well as in cpucsekk above. Depending on iotop version, ~/.showiotop/showiotop_col.txt might need to be set as the column number for the process name. Only works ok if iotop is granted sudo access. Otherwise can set this column number to 0 and the script exits with no output.
+
+* topoftop shows the heaviest process if it uses more CPU than the threshold set in ~/.cpucsekk/cpucsekk.txt (this file is created if doesn't yet exist). I use this one as well in my status bar and in cpucsekk above.
+
 I'm no programmer, so please don't blame me on the quality of the code. :-)
 
 Licensed under GNU GPLv3.
