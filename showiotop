@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Extract the top process of iotop.
-# Optional /home/mb13434/.showiotop/showiotop_col.txt to change default column 9, since there are various versions of iotop out there. 0 Means do nothing (e.g., if iotop is not granted sudo, see below).
+# Optional ~/.showiotop/showiotop_col.txt to change default column 9, since there are various versions of iotop out there. 0 Means do nothing (e.g., if iotop is not granted sudo, see below).
 # Obviously needs iotop, and add
 # ## Allow root to run any commands anywhere”)
 # balazs ALL=(ALL) NOPASSWD:/usr/bin/iotop
