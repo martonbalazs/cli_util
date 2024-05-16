@@ -34,7 +34,6 @@ awk '{
  for (i=1; i<=NF; i++){
   if ($i=="%CPU"){
    cpucol=i
-   lineno=FNR+1
   }
   if ($i=="COMMAND"){
    commcol=i

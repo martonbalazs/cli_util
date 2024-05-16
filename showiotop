@@ -2,9 +2,9 @@
 
 # Extract the top process of iotop.
 # Optional ~/.showiotop/showiotop_col.txt to change default column 9, since there are various versions of iotop out there. 0 Means do nothing (e.g., if iotop is not granted sudo, see below).
-# Obviously needs iotop, and add
+# Obviously needs iotop, and add (with your <user>)
 # ## Allow root to run any commands anywhere”)
-# balazs ALL=(ALL) NOPASSWD:/usr/bin/iotop
+# <user> ALL=(ALL) NOPASSWD:/usr/bin/iotop
 # to /etc/sudoers
 
 colno=9
