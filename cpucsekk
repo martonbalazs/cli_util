@@ -6,7 +6,7 @@
 # Had problems with narrow screens. So, save just two columns: %CPU and COMMAND from within top to ~/bin/.toprc
 
 delay=1		# Seconds to wait before next measurement
-swapthr=80	# Also hangs if swap is more full than this percent
+swapthr=60	# Also hangs if swap is more full than this percent
 chkrsync=1	# Turn this to 0 if you want to skip check for a running rsync. Especially with hard drives, it's not nice to load the system during rsyncing.
 
 # Randomize delay: it's no good to finish all instances at the same time if a script launches multiple cpucsekks.
@@ -124,7 +124,7 @@ while true; do		# While load > $cpupc%
  then
   ps cax | grep rsync > /dev/null
   if [ $? -eq 0 ]; then
-   echo "Found runnning rsync, waiting..."
+   echo "Found running rsync, waiting..."
    rsyncruns="1"
   fi
  fi

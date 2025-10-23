@@ -1,6 +1,4 @@
 #!/bin/bash
-# 2015.08.29
-
 # Displays public ip if changed.
 
 #How often should we check for ip (in sec)?
@@ -28,11 +26,10 @@ function getthatip {
    trueip="Got no response from $currurl"
   fi
 
-# What do we got?
+# What did we get?
   if [[ $trueip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]
   then
    out="$trueip"
-   nonoftimes=0
    break
   else
    out="$out; $trueip"
