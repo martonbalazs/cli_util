@@ -3,7 +3,8 @@
 #Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
 #http://colby.id.au/node/39
 
-delay=1		# Seconds to wait before next measurement
+delay=3		# Seconds to wait before next measurement
+iomeas=0.2	# Time to check io traffic. Around 3 secs it always gets busy!
 swapthr=60	# Also hangs if swap is more full than this percent
 chkrsync=1	# Turn this to 0 if you want to skip check for a running rsync. Especially with hard drives, it's not nice to load the system during rsyncing.
 
@@ -45,7 +46,7 @@ while true; do		# While load > $cpupc%
   #osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
   osda=`cat /sys/block/sda/stat | awk '{ print($11) }'`	# also check sda is not busy.
 
-  sleep $rdelay
+  sleep $iomeas
 
   #nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
   nsda=`cat /sys/block/sda/stat | awk '{ print($11) }'`
@@ -54,7 +55,7 @@ while true; do		# While load > $cpupc%
  then
   osda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`	# also check ssd is not busy.
 
-  sleep $rdelay
+  sleep $iomeas
 
   nsda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`
  else
@@ -109,4 +110,5 @@ while true; do		# While load > $cpupc%
  if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] && [[ $rsyncruns == "0" ]] && [[ $cqueuepos == 1 ]] ; then
   break
  fi
+ sleep $rdelay
 done

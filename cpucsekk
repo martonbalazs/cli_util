@@ -5,7 +5,8 @@
 
 # Had problems with narrow screens. So, save just two columns: %CPU and COMMAND from within top to ~/bin/.toprc
 
-delay=1		# Seconds to wait before next measurement
+delay=3		# Seconds to wait before next measurement
+iomeas=0.2	# Time to check io traffic. Around 3 secs it always gets busy!
 swapthr=60	# Also hangs if swap is more full than this percent
 chkrsync=1	# Turn this to 0 if you want to skip check for a running rsync. Especially with hard drives, it's not nice to load the system during rsyncing.
 
@@ -33,8 +34,6 @@ TOTALA=0
 for VALUE in "${CPU[@]}"; do
  let "TOTALA=$TOTALA+$VALUE"
 done
-
-echo "cpucsekk: press c [enter] to skip."
  
 while true; do		# While load > $cpupc%
  cpupc=`cat $HOME/.cpucsekk/cpucsekk.txt`	# How low do we allow to step to the next task
@@ -55,10 +54,11 @@ while true; do		# While load > $cpupc%
  # cpucsekk seems a good place to try cure this.
  # python3 -c $'import os\nos.set_blocking(0, True)'
  #cat /proc/self/fdinfo/0
-  read -t $rdelay -p "" ki
-  if [ "$ki" == "c" ]; then
-   break
-  fi
+  sleep $iomeas
+#  read -t $rdelay -p "" ki
+#  if [ "$ki" == "c" ]; then
+#   break
+#  fi
 
   #nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
   nsda=`cat /sys/block/sda/stat | awk '{ print($11) }'`
@@ -73,10 +73,11 @@ while true; do		# While load > $cpupc%
  # cpucsekk seems a good place to try cure this.
  # python3 -c $'import os\nos.set_blocking(0, True)'
  #cat /proc/self/fdinfo/0
-  read -t $rdelay -p "" ki
-  if [ "$ki" == "c" ]; then
-   break
-  fi
+  sleep $iomeas
+#  read -t $rdelay -p "" ki
+#  if [ "$ki" == "c" ]; then
+#   break
+#  fi
 
   nsda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`
  else
@@ -114,7 +115,6 @@ while true; do		# While load > $cpupc%
 
  let "ioincr=$nsda-$osda"
  siotop=`$HOME/bin/showiotop`
- echo "$ido  io: $ioincr  t $LOAD%  sw $swappc%  $topbol $siotop"
  TOTALA=$TOTALB				# Turn this round into last round
  IDLEA=$IDLEB
 
@@ -134,15 +134,21 @@ while true; do		# While load > $cpupc%
  allcpids=`ps -C cpucsekk -C silent_cpucsekk -o pid=|sed 's/ //g'`
 #echo "My PID: $$; all PIDS: $allcpids"
  cqueuepos=`echo "$allcpids"|awk -v line=$$ '$0 == line {print NR}'`
+if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] && [[ $rsyncruns == "0" ]] && [[ $cqueuepos == 1 ]] ; then
+  break
+ fi
  if [[ $cqueuepos > 1 ]]
  then
   echo "We are at position $cqueuepos in the cpucsekk line."
  fi
-
- #if [[ $LOAD -lt $cpupc ]] ; then
- if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] && [[ $rsyncruns == "0" ]] && [[ $cqueuepos == 1 ]] ; then
-  # python3 -c $'import os\nos.set_blocking(0, True)'
-  #cat /proc/self/fdinfo/0
+ echo "$ido  io: $ioincr  t $LOAD%  sw $swappc%  $topbol $siotop"
+ read -t $rdelay -p "" ki
+ if [[ "$cseen" != "1" ]]
+ then
+  echo "cpucsekk: press c [enter] to skip."
+ fi
+ if [ "$ki" == "c" ]; then
   break
  fi
+ cseen=1
 done
