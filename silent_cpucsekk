@@ -1,114 +1,25 @@
 #!/bin/bash
 
-#Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
-#http://colby.id.au/node/39
+# Client to cpucsekk_server
+# Stand in queue
+# Tell us why
 
-delay=3		# Seconds to wait before next measurement
-iomeas=0.2	# Time to check io traffic. Around 3 secs it always gets busy!
-swapthr=60	# Also hangs if swap is more full than this percent
-chkrsync=1	# Turn this to 0 if you want to skip check for a running rsync. Especially with hard drives, it's not nice to load the system during rsyncing.
+inicheck=0.5	#Initial wait in queue. Better the server acts first if it can.
+checkint=1	#How often to look into queue
+ourpid=$$
 
-# Randomize delay: it's no good to finish all instances at the same time if a script launches multiple cpucsekks.
-rdelay=`echo "$delay*($RANDOM/32767+0.5)"|bc -l`
+echo "$ourpid" >> /tmp/cpucsekk_$USER/cpucsekk_queue
+sleep $inicheck
 
-if [ ! -d $HOME/.cpucsekk/ ]
-then
- mkdir $HOME/.cpucsekk/
-fi
-
-# Edit this file for different CPU load levels.
-if [ ! -f $HOME/.cpucsekk/silent_cpucsekk.txt ]
-then
- echo "15" > $HOME/.cpucsekk/silent_cpucsekk.txt
-fi
-
-LOAD=100
-CPU=(`grep '^cpu ' /proc/stat`)
-unset CPU[0]                          # Discard the "cpu" prefix.
-IDLEA=${CPU[4]}                        # Get the idle CPU time.
- 
-# Calculate the total CPU time.
-TOTALA=0
-for VALUE in "${CPU[@]}"; do
- let "TOTALA=$TOTALA+$VALUE"
-done
- 
-while true; do		# While load > $cpupc%
- cpupc=`cat $HOME/.cpucsekk/silent_cpucsekk.txt`	# How low do we allow to step to the next task
-
- re='^[0-9]+$'
- if ! [[ $cpupc =~ $re ]] ; then
-  echo "$HOME/.cpucsekk/silent_cpucsekk.txt should contain a single percentage number." >&2; exit 1
- fi
-
- if [[ -f /sys/block/sda/stat ]]
+while true
+do
+ #If we find our own pid:
+ if grep -q "$ourpid" /tmp/cpucsekk_$USER/cpucsekk_queue
  then
-  #osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy. (currently only sda is checked...)
-  osda=`cat /sys/block/sda/stat | awk '{ print($11) }'`	# also check sda is not busy.
+  sleep $checkint
 
-  sleep $iomeas
-
-  #nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
-  nsda=`cat /sys/block/sda/stat | awk '{ print($11) }'`
- 
- elif [[ -f /sys/block/nvme0n1/stat ]]
- then
-  osda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`	# also check ssd is not busy.
-
-  sleep $iomeas
-
-  nsda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`
+ #If we don't find our own pid then terminate
  else
-  osda=0
-  nsda=0
- fi
-
- CPU=(`grep '^cpu ' /proc/stat`)
- unset CPU[0]                          # Discard the "cpu" prefix.
- IDLEB=${CPU[4]}                        # Get the idle CPU time.
-  
- # Calculate the total CPU time.
- TOTALB=0
- for VALUE in "${CPU[@]}"; do
-  let "TOTALB=$TOTALB+$VALUE"
- done
- 
- let "TOTAL=$TOTALB-$TOTALA"		# Increments since last round
- #echo "$TOTAL"
- let "IDLE=$IDLEB-$IDLEA"
- let "LOAD=100*($TOTAL-$IDLE)/$TOTAL"	# Load percent since last round
-
-# Now let's look at the swap
- swaptot=$(awk '$1~/^SwapTotal/ {print($2)}' /proc/meminfo)
- swapfr=$(awk '$1~/^SwapFree/ {print($2)}' /proc/meminfo)
- if [[ "$swaptot" =~ ^[0-9]+$ ]] && [[ "$swaptot" != "0" ]]
- then
-  swappc=$((100-100*$swapfr/$swaptot))
- else
-  swappc=0
- fi
- 
- TOTALA=$TOTALB				# Turn this round into last round
- IDLEA=$IDLEB
-
-# Check for running rsync
- rsyncruns="0"
- if [[ $chkrsync == "1" ]]
- then
-  ps cax | grep rsync > /dev/null
-  if [ $? -eq 0 ]; then
-   rsyncruns="1"
-  fi
- fi
-
-# Check for other cpucsekks, to avoid simultaneous ending
-# ps -C seems to output list in increasing order so we just check the first item. We can let things go if we are the first.
- allcpids=`ps -C cpucsekk -C silent_cpucsekk -o pid=|sed 's/ //g'`
- cqueuepos=`echo "$allcpids"|awk -v line=$$ '$0 == line {print NR}'`
-
- #if [[ $LOAD -lt $cpupc ]] ; then
- if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] && [[ $rsyncruns == "0" ]] && [[ $cqueuepos == 1 ]] ; then
   break
  fi
- sleep $rdelay
 done

@@ -5,7 +5,7 @@ Simple utils
 
 A selection of handy CLI utilities.
 
-* cpucsekk hangs until the CPU usage drops below 15% and swap below 60%, and no I/O requests are queuing for the internal drive. I don't like overloading the system by starting a lot of things together. (Credits go to Paul Colby.) The one named silent_cpucsekk does what you'd guess. Threshold % levels (default: 15%) can be set in the txt files of ~/.cpucsekk (plain numbers and nothing else there, please).
+* cpucsekk hangs until the CPU usage drops below 15% and swap below 60%, and no I/O requests are queuing for the internal drive. I don't like overloading the system by starting a lot of things together. (Credits go to Paul Colby.) The one named silent_cpucsekk does what you'd guess. The system needs the script cpucsekk_server to run in the background, this is doing the actual work. Threshold % levels and turning a few things like I/O check off can be set in a config file, see details inside the cpucsekk_server script.
 
 * daddybank [input file] [optional currency] is a utility to keep track of kids' pocket money. It needs an input file with lines of the format:
 `<orgmode style active date> [name] [currency] [set/add/sub/int/yrl] [amount] [whatever comment from here]`

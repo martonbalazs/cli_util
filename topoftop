@@ -1,24 +1,26 @@
 #!/bin/bash
 
 # Gets the heaviest job from top, if above certain threshold.
+cpupc=15	# Percent of cpu load (combined across each cores) to hold cpucsekk, see inside the script cpucsekk_server.
 
-# Cpucsekk stuff first
-if [ ! -d $HOME/.cpucsekk/ ]
+if [ -f $HOME/.cpucsekk/cpucsekk_params.txt ]
 then
- mkdir $HOME/.cpucsekk/
-fi
 
-# Edit this file for different CPU load threshold.
-if [ ! -f $HOME/.cpucsekk/cpucsekk.txt ]
-then
- echo "15" > $HOME/.cpucsekk/cpucsekk.txt
-fi
-
-# Don't display anything below this threshold:
-cpupc=`cat $HOME/.cpucsekk/cpucsekk.txt`
-re='^[0-9]+$'
-if ! [[ $cpupc =~ $re ]] ; then
- echo "$HOME/.cpucsekk/cpucsekk.txt should contain a single percentage number." >&2; exit 1
+ # Remove spaces, pick line starting with cpupc
+ cpupcline=$(sed "s/ //g" $HOME/.cpucsekk/cpucsekk_params.txt|grep "^\bcpupc\b")
+ if [[ "$cpupcline" != "" ]]
+ then
+  # Expand after last =
+  rawcpupc=${cpupcline##*=}
+  #Check what we got
+  checkcpupc=`echo "$rawcpupc" | grep -E ^\-?[0-9]*\.?[0-9]+$`
+  if [[ "$checkcpupc" == "" ]]
+  then
+   echo "cpupc should be a number, skipping $cpupcline in $HOME/.cpucsekk/cpucsekk_params.txt"
+  else
+   cpupc="$rawcpupc"
+  fi
+ fi
 fi
 
 # Get top percentage and name of process

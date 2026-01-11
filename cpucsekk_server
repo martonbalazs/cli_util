@@ -1,0 +1,290 @@
+#!/bin/bash
+
+#Credits go to Paul Colby (http://colby.id.au), who says no rights reserved ;)
+#http://colby.id.au/node/39
+# [2026-01-04 Sun]: Server-client rewrite of the whole thing as non-sequential pid's were encountered. Apparently that's a thing. :-(
+# So, here is the idea.
+# Server checks the parameters in ~/.cpucsekk/cpucsekk_params.txt for these:
+
+delay=1		# Seconds to wait before next measurement
+iomeas=0.2	# Time to check io traffic. Around 3 secs it always gets busy!
+cpupc=15	# Percent of cpu load (combined across each cores) to hold cpucsekk
+swapthr=60	# Also holds if swap is more full than this percent
+chkrsync=1	# Turn this to 0 if you want to skip check for a running rsync. Especially with hard drives, it's not nice to load the system during rsyncing.
+chkio=1		# Turn this to 0 if you want to skip check for i/o wait. E.g., Carbon Black is written so badly as to constantly engage the disk.
+
+# Any of these can be overwritten in ~/.cpucsekk/cpucsekk_params.txt.
+# Infinite loop:
+# Server checks the file /tmp/cpucsekk_$USER/cpucsekk_queue .
+# If file is empty, then check again in $iomeas time.
+# If file is not empty, then perform measurement for $iomeas time. If all checks passed, remove top line from file. Otherwise wait $delay.
+
+# Create working dir if not present
+mkdir -p /tmp/cpucsekk_$USER/
+
+# Edit this file for different CPU load levels.
+if [ -f $HOME/.cpucsekk/cpucsekk_params.txt ]
+then
+
+ # Remove spaces, pick line starting with delay
+ delayline=$(sed "s/ //g" $HOME/.cpucsekk/cpucsekk_params.txt|grep "^\bdelay\b")
+ if [[ "$delayline" != "" ]]
+ then
+  # Expand after last =
+  rawdelay=${delayline##*=}
+  #Check what we got
+  checkdelay=`echo "$rawdelay" | grep -E ^\-?[0-9]*\.?[0-9]+$`
+  if [[ "$checkdelay" == "" ]]
+  then
+   echo "delay should be a number, skipping $delayline in $HOME/.cpucsekk/cpucsekk_params.txt"
+  else
+   delay="$rawdelay"
+  fi
+ fi
+
+ # Remove spaces, pick line starting with iomeas
+ iomeasline=$(sed "s/ //g" $HOME/.cpucsekk/cpucsekk_params.txt|grep "^\biomeas\b")
+ if [[ "$iomeasline" != "" ]]
+ then
+  # Expand after last =
+  rawiomeas=${iomeasline##*=}
+  #Check what we got
+  checkiomeas=`echo "$rawiomeas" | grep -E ^\-?[0-9]*\.?[0-9]+$`
+  if [[ "$checkiomeas" == "" ]]
+  then
+   echo "iomeas should be a number, skipping $iomeasline in $HOME/.cpucsekk/cpucsekk_params.txt"
+  else
+   iomeas="$rawiomeas"
+  fi
+ fi
+
+ # Remove spaces, pick line starting with cpupc
+ cpupcline=$(sed "s/ //g" $HOME/.cpucsekk/cpucsekk_params.txt|grep "^\bcpupc\b")
+ if [[ "$cpupcline" != "" ]]
+ then
+  # Expand after last =
+  rawcpupc=${cpupcline##*=}
+  #Check what we got
+  checkcpupc=`echo "$rawcpupc" | grep -E ^\-?[0-9]*\.?[0-9]+$`
+  if [[ "$checkcpupc" == "" ]]
+  then
+   echo "cpupc should be a number, skipping $cpupcline in $HOME/.cpucsekk/cpucsekk_params.txt"
+  else
+   cpupc="$rawcpupc"
+  fi
+ fi
+
+ # Remove spaces, pick line starting with swapthr
+ swapthrline=$(sed "s/ //g" $HOME/.cpucsekk/cpucsekk_params.txt|grep "^\bswapthr\b")
+ if [[ "$swapthrline" != "" ]]
+ then
+  # Expand after last =
+  rawswapthr=${swapthrline##*=}
+  #Check what we got
+  checkswapthr=`echo "$rawswapthr" | grep -E ^\-?[0-9]*\.?[0-9]+$`
+  if [[ "$checkswapthr" == "" ]]
+  then
+   echo "swapthr should be a number, skipping $swapthrline in $HOME/.cpucsekk/cpucsekk_params.txt"
+  else
+   swapthr="$rawswapthr"
+  fi
+ fi
+
+ # Remove spaces, pick line starting with chkrsync
+ chkrsyncline=$(sed "s/ //g" $HOME/.cpucsekk/cpucsekk_params.txt|grep "^\bchkrsync\b")
+ if [[ "$chkrsyncline" != "" ]]
+ then
+  # Expand after last =
+  rawchkrsync=${chkrsyncline##*=}
+  #Check what we got
+  if [[ "$rawchkrsync" != "0" ]] && [[ "$rawchkrsync" != "1" ]]
+  then
+   echo "chkrsync should be 0 or 1, skipping $chkrsyncline in $HOME/.cpucsekk/cpucsekk_params.txt"
+  else
+   chkrsync="$rawchkrsync"
+  fi
+ fi
+
+ # Remove spaces, pick line starting with chkio
+ chkioline=$(sed "s/ //g" $HOME/.cpucsekk/cpucsekk_params.txt|grep "^\bchkio\b")
+ if [[ "$chkioline" != "" ]]
+ then
+  # Expand after last =
+  rawchkio=${chkioline##*=}
+  #Check what we got
+  if [[ "$rawchkio" != "0" ]] && [[ "$rawchkio" != "1" ]]
+  then
+   echo "chkio should be 0 or 1, skipping $chkioline in $HOME/.cpucsekk/cpucsekk_params.txt"
+  else
+   chkio="$rawchkio"
+  fi
+ fi
+fi
+
+#So now we have them all:
+echo "Cpucsekk server started with params"
+echo "delay = $delay"
+echo "iomeas = $iomeas"
+echo "cpupc = $cpupc"
+echo "swapthr = $swapthr"
+echo "chkrsync = $chkrsync"
+echo "chkio = $chkio"
+
+while true; do
+
+ # If there's a queue:
+ if [[ -s "/tmp/cpucsekk_$USER/cpucsekk_queue" ]]
+ then
+
+  #Start measuring CPU: idle time
+  CPU=(`grep '^cpu ' /proc/stat`)
+  unset CPU[0]                          # Discard the "cpu" prefix.
+  IDLEA=${CPU[4]}                        # Get the idle CPU time.
+  
+  #Start measuring total CPU time.
+  TOTALA=0
+  for VALUE in "${CPU[@]}"; do
+   let "TOTALA=$TOTALA+$VALUE"
+  done
+ 
+  #Start measuring i/o
+  if [[ "$chkio" == "1" ]]
+  then
+   if [[ -f /sys/block/sda/stat ]]
+   then
+    #osda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`	# also check sda is not busy.
+    osda=`cat /sys/block/sda/stat | awk '{ print($11) }'`	# also check sda is not busy.
+   elif [[ -f /sys/block/nvme0n1/stat ]]
+   then
+    osda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`	# also check ssd is not busy.
+   else
+    osda=0
+   fi
+
+  # If io checks are excluded
+  else
+   osda=0
+  fi
+ 
+  #We measure for this long:
+  sleep $iomeas
+ 
+  #Now measure CPU again. Ilde:
+  CPU=(`grep '^cpu ' /proc/stat`)
+  unset CPU[0]                          # Discard the "cpu" prefix.
+  IDLEB=${CPU[4]}                        # Get the idle CPU time.
+   
+  #Measure total CPU time again
+  TOTALB=0
+  for VALUE in "${CPU[@]}"; do
+   let "TOTALB=$TOTALB+$VALUE"
+  done
+  
+  #Measure i/o again
+  if [[ "$chkio" == "1" ]]
+  then
+   if [[ -f /sys/block/sda/stat ]]
+   then
+    #nsda=`cat /sys/block/sda/stat | awk '{ print($NF) }'`
+    nsda=`cat /sys/block/sda/stat | awk '{ print($11) }'`
+   elif [[ -f /sys/block/nvme0n1/stat ]]
+   then
+    nsda=`cat /sys/block/nvme0n1/stat | awk '{ print($11) }'`
+   else
+    nsda=0
+   fi
+
+  # If io checks are excluded
+  else
+   nsda=0
+  fi
+
+  #Compute CPU percentage
+  let "TOTAL=$TOTALB-$TOTALA"		# Increment during measurement
+  #echo "$TOTAL"
+  let "IDLE=$IDLEB-$IDLEA"
+  let "LOAD=100*($TOTAL-$IDLE)/$TOTAL"	# Load percent during measurement
+ 
+ # Now let's look at the swap
+  swaptot=$(awk '$1~/^SwapTotal/ {print($2)}' /proc/meminfo)
+  swapfr=$(awk '$1~/^SwapFree/ {print($2)}' /proc/meminfo)
+  if [[ "$swaptot" =~ ^[0-9]+$ ]] && [[ "$swaptot" != "0" ]]
+  then
+   swappc=$((100-100*$swapfr/$swaptot))
+  else
+   swappc=0
+  fi
+ 
+ # Check for running rsync
+  rsyncruns="0"
+  if [[ $chkrsync == "1" ]]
+  then
+   ps cax | grep rsync > /dev/null
+   if [ $? -eq 0 ]; then
+    rsyncruns="1"
+   fi
+  fi
+ 
+  #So, are all conditions met?
+  if [[ $LOAD -lt $cpupc ]] && [[ $osda == $nsda ]] && [[ $swappc -lt $swapthr ]] && [[ $rsyncruns == "0" ]] ; then
+  
+   # Remove top entry from queue  
+   sed -i '1d' "/tmp/cpucsekk_$USER/cpucsekk_queue"
+   #echo "Removed top line of "/tmp/cpucsekk_$USER/cpucsekk_queue"
+
+   # Clear why file
+   echo "" > "/tmp/cpucsekk_$USER/cpucsekk_why"
+
+   # If there's still a queue:
+   if [[ -s "/tmp/cpucsekk_$USER/cpucsekk_queue" ]]
+   then
+    sleep $delay
+   fi
+
+  # If conditions are not met, tell us why
+  else
+
+   if [[ $LOAD -lt $cpupc ]]
+   then
+    tellcpu=""
+   else
+    tellcpu="cpu: $LOAD	"
+   fi
+ 
+   if [[ $osda == $nsda ]]
+   then
+    tellio=""
+   else
+    tellioval=$((nsda-osda))
+    tellio="io: $tellioval	"
+   fi
+ 
+   if [[ $swappc -lt $swapthr ]]
+   then
+    tellswappc=""
+   else
+    tellswappc="sw: $swappc	"
+   fi
+ 
+   if [[ $rsyncruns == "0" ]]
+   then
+    tellrsyncruns=""
+   else
+    tellrsyncruns="rsync	"
+   fi
+
+   telltot=`topoftop`
+   tellshio=`showiotop`
+
+   echo "$tellcpu$tellio$tellswappc$tellrsyncruns$telltot$tellshio" > "/tmp/cpucsekk_$USER/cpucsekk_why"
+
+   sleep $delay
+  fi
+
+
+ # If there's no queue
+ else
+  #echo "No queue"
+  sleep $iomeas
+ fi
+done
