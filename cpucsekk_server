@@ -9,7 +9,7 @@
 delay=1		# Seconds to wait before next measurement
 iomeas=0.2	# Time to check io traffic. Around 3 secs it always gets busy!
 cpupc=15	# Percent of cpu load (combined across each cores) to hold cpucsekk
-swapthr=60	# Also holds if swap is more full than this percent
+swapthr=40	# Also holds if swap is more full than this percent
 chkrsync=1	# Turn this to 0 if you want to skip check for a running rsync. Especially with hard drives, it's not nice to load the system during rsyncing.
 chkio=1		# Turn this to 0 if you want to skip check for i/o wait. E.g., Carbon Black is written so badly as to constantly engage the disk.
 
