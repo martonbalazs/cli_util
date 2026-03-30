@@ -3,10 +3,24 @@
 # Client to cpucsekk_server
 # Stand in queue
 # Tell us why
+# Force wait with the -w option
 
 inicheck=0.5	#Initial wait in queue. Better the server acts first if it can.
 checkint=1	#How often to look into queue
 ourpid=$$
+#
+# Process -w option
+while getopts w opcio
+do
+ case "$opcio" in
+  w) wait="1"
+ esac
+done
+
+if [[ "$wait" == "1" ]]
+then
+ touch /tmp/cpucsekk_$USER/cpucsekk_wait
+fi
 
 echo "$ourpid" >> /tmp/cpucsekk_$USER/cpucsekk_queue
 sleep $inicheck
