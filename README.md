@@ -5,7 +5,7 @@ Simple utils
 
 A selection of handy CLI utilities.
 
-* cpucsekk hangs until the CPU usage drops below 15% and swap below 60%, and no I/O requests are queuing for the internal drive. I don't like overloading the system by starting a lot of things together. (Credits go to Paul Colby.) The one named silent_cpucsekk does what you'd guess. The system needs the script cpucsekk_server to run in the background, this is doing the actual work. Threshold % levels and turning a few things like I/O check off can be set in a config file, see details inside the cpucsekk_server script.
+* cpucsekk hangs until the CPU usage drops below 15% and swap below 60%, and no I/O requests are queuing for the internal drive. I don't like overloading the system by starting a lot of things together. (Credits go to Paul Colby.) The one named silent_cpucsekk does what you'd guess. The system needs the script cpucsekk_server to run in the background, this is doing the actual work. Threshold % levels and turning a few things like I/O check off can be set in a config file, see details inside the cpucsekk_server script. The queue can be forced to move by one via invoking skip_cpucsekk.
 
 * daddybank [input file] [optional currency] is a utility to keep track of kids' pocket money. It needs an input file with lines of the format:
 `<orgmode style active date> [name] [currency] [set/add/sub/int/yrl] [amount] [whatever comment from here]`
@@ -19,7 +19,7 @@ where [name] must be a single word, and the fourth entry is any of
 
  Multiple names in distinct lines are supported and result in separate accounts. Lines starting with # are ignored. The script adds `yrl/365` daily to the account and also adds daily compounded interest `int/(100*365)` based on the daily balance. `int` and `yrl` can be set multiple times with different dates. An optional currency code as a second parameter to the script triggers a conversion rate download from ECB and combines all accounts of a [name] into the desired currency. 
 
-* datumhom prints the date (yy.mm.dd), time, and weather. Uses metar for weather, thus needs it installed as well as an airport (and its ICAO code) nearby. Refresh intervals can also be set, see the script itself. It has been designed to use with the gltext screensaver. 
+* datumhom prints the date (yy.mm.dd), time, and weather. Uses metar and wttr.in for weather, thus needs metar installed as well as an airport (and its ICAO code) nearby. Refresh intervals can also be set, see the script itself. It has been designed to use with the gltext screensaver. 
 
 * dbst hangs until Dropbox says "Idle" three times with 1 sec differences. I use it to make sure no other synchronization script starts before Dropbox finishes. 
 

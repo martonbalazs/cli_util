@@ -39,6 +39,8 @@ if [ -e ~/.datumhom/hom.txt ]; then
   else
    metar get|awk '{ if ($1=="Temperature:") print(substr($4,2) "C"); if ($1=="Wind:") printf("%.0f" "km/h; ",$8*1.609) }' > ~/.datumhom/hom.txt
   fi
+  curl -s "wttr.in/Bristol?format=%p" >> ~/.datumhom/hom.txt
+  #curl -s "wttr.in/Bristol?format=%w+%C+%t+%p" >> ~/.datumhom/hom.txt
  fi
 else
 # If file doesn't exist, refresh:
@@ -47,6 +49,7 @@ else
  else
   metar get|awk '{ if ($1=="Temperature:") print(substr($4,2) "C"); if ($1=="Wind:") printf("%.0f" "km/h; ",$8*1.609) }' > ~/.datumhom/hom.txt
  fi
+ curl -s "wttr.in/Bristol?format=%p" >> ~/.datumhom/hom.txt
 fi
 
 #Print the file

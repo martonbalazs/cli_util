@@ -1,0 +1,5 @@
+#!/bin/bash
+
+sed -i '1d' "/tmp/cpucsekk_$USER/cpucsekk_queue"
+echo "Removed top line of /tmp/cpucsekk_$USER/cpucsekk_queue"
+
