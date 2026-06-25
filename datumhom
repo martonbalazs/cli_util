@@ -9,6 +9,7 @@ export METARURL="https://tgftp.nws.noaa.gov/data/observations/metar/stations/"
 
 # Where to collect from? --> instead do metar set eggd
 where="eggd" #Bristol
+forwttrurl="Bristol"
 
 # How often should we update the weather (in sec)?
 often=300
@@ -39,7 +40,7 @@ if [ -e ~/.datumhom/hom.txt ]; then
   else
    metar get|awk '{ if ($1=="Temperature:") print(substr($4,2) "C"); if ($1=="Wind:") printf("%.0f" "km/h; ",$8*1.609) }' > ~/.datumhom/hom.txt
   fi
-  curl -s "wttr.in/Bristol?format=%p" >> ~/.datumhom/hom.txt
+  curl -s "wttr.in/$forwttrurl?format=%p" >> ~/.datumhom/hom.txt
   #curl -s "wttr.in/Bristol?format=%w+%C+%t+%p" >> ~/.datumhom/hom.txt
  fi
 else
@@ -49,7 +50,7 @@ else
  else
   metar get|awk '{ if ($1=="Temperature:") print(substr($4,2) "C"); if ($1=="Wind:") printf("%.0f" "km/h; ",$8*1.609) }' > ~/.datumhom/hom.txt
  fi
- curl -s "wttr.in/Bristol?format=%p" >> ~/.datumhom/hom.txt
+ curl -s "wttr.in/$forwttrurl?format=%p" >> ~/.datumhom/hom.txt
 fi
 
 #Print the file
